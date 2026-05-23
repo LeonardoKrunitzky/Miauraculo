@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_reading_table"
+    tools:context=".MainActivity">
+    <ImageView
+        android:id="@+id/imgCard1"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="60dp"
+        android:elevation="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/img_card_back"
+        app:layout_constraintDimensionRatio="h,1:1.6"
+        app:layout_constraintEnd_toStartOf="@+id/imgCard2"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.28" />
+
+    <ImageView
+        android:id="@+id/imgCard2"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="60dp"
+        android:elevation="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/img_card_back"
+        app:layout_constraintDimensionRatio="h,1:1.6"
+        app:layout_constraintEnd_toStartOf="@+id/imgCard3"
+        app:layout_constraintStart_toEndOf="@+id/imgCard1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.28" />
+
+    <ImageView
+        android:id="@+id/imgCard3"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="60dp"
+        android:elevation="10dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/img_card_back"
+        app:layout_constraintDimensionRatio="h,1:1.6"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/imgCard2"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.28" />
+
+    <ImageView
+        android:id="@+id/mascotMiauraculo"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:elevation="20dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/mascot_miauraculo"
+        android:translationY="220dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/bubbleContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="12dp"
+        android:alpha="0"
+        android:elevation="20dp"
+        app:layout_constraintBottom_toTopOf="@+id/mascotMiauraculo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_max="400dp"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="148dp">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@layout/bg_speech_bubble"
+            android:scrollbars="none">
+
+            <TextView
+                android:id="@+id/txtMascotMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:padding="16dp"
+                android:text="Miau! Concentre-se na sua pergunta antes de virar a carta..."
+                android:textColor="#2A2A2A"
+                android:textSize="16sp"
+                android:textStyle="italic" />
+        </ScrollView>
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
