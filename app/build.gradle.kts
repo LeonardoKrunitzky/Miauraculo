@@ -47,6 +47,10 @@ android {
     }
 }
 
+base {
+    archivesName.set("Miauráculo")
+}
+
 dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
