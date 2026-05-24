@@ -2,6 +2,7 @@ package com.example.miauraculo;
 
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -30,6 +31,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
 
 public class ReadingActivity extends AppCompatActivity {
 
@@ -62,6 +64,8 @@ public class ReadingActivity extends AppCompatActivity {
             "O Julgamento", "O Mundo"
     };
     private final String MISTRAL_API_KEY = BuildConfig.MISTRAL_API_KEY;
+    private MediaPlayer bgMusic;
+    private MediaPlayer flipSound;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -80,6 +84,7 @@ public class ReadingActivity extends AppCompatActivity {
         setupDeck();
         startMysticAnimations();
         retrieveReadingType();
+        setupAudio();
 
         findViewById(android.R.id.content).setOnClickListener(v -> handleScreenClick());
     }
@@ -91,6 +96,16 @@ public class ReadingActivity extends AppCompatActivity {
                 // Do nothing
             }
         });
+    }
+
+    private void setupAudio() {
+        bgMusic = MediaPlayer.create(this, R.raw.bg_music);
+        if (bgMusic != null) {
+            bgMusic.setLooping(true);
+            bgMusic.start();
+        }
+
+        flipSound = MediaPlayer.create(this, R.raw.card_reveal);
     }
 
     private void setupDeck() {
@@ -121,6 +136,11 @@ public class ReadingActivity extends AppCompatActivity {
     private void revealCard(ImageView card, int cardIndex) {
         isProcessing = true;
         String nomeDaCarta = cardNames[cardIndex];
+
+        if (flipSound != null) {
+            flipSound.seekTo(0);
+            flipSound.start();
+        }
 
         card.animate().rotationY(90f).setDuration(300).withEndAction(() -> {
             card.setImageResource(cardDrawables[cardIndex]);
@@ -268,5 +288,21 @@ public class ReadingActivity extends AppCompatActivity {
                             .start();
                 })
                 .start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bgMusic != null) {
+            if (bgMusic.isPlaying()) {
+                bgMusic.stop();
+            }
+            bgMusic.release();
+            bgMusic = null;
+        }
+        if (flipSound != null) {
+            flipSound.release();
+            flipSound = null;
+        }
     }
 }
