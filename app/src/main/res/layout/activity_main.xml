@@ -27,9 +27,21 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:id="@+id/tvEnergiaStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Aproxime a mão do topo da tela para ler sua energia..."
+            android:textColor="#FFEB3B"
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:gravity="center"
             android:layout_marginBottom="24dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/dropdownLayout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
