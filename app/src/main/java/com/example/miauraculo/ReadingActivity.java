@@ -3,9 +3,11 @@ package com.example.miauraculo;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Html;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
@@ -32,7 +34,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-
 public class ReadingActivity extends AppCompatActivity {
 
     private final OkHttpClient client = new OkHttpClient();
@@ -43,6 +44,7 @@ public class ReadingActivity extends AppCompatActivity {
     private int currentStep = 0;
 
     private String tipoLeitura;
+    private String[] leiturasSalvas = new String[3];
 
     private List<Integer> deckIndices;
 
@@ -66,6 +68,7 @@ public class ReadingActivity extends AppCompatActivity {
     private final String MISTRAL_API_KEY = BuildConfig.MISTRAL_API_KEY;
     private MediaPlayer bgMusic;
     private MediaPlayer flipSound;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,13 +90,46 @@ public class ReadingActivity extends AppCompatActivity {
         setupAudio();
 
         findViewById(android.R.id.content).setOnClickListener(v -> handleScreenClick());
+
+        card1.setOnClickListener(v -> reLerCarta(0));
+        card2.setOnClickListener(v -> reLerCarta(1));
+        card3.setOnClickListener(v -> reLerCarta(2));
+
+        mascot.setOnClickListener(v -> {
+            if (currentStep >= 4 && !isProcessing) {
+                isProcessing = true;
+                setMascotText("Os astros falaram. Agora é com você, humano. Miau!");
+                new Handler(Looper.getMainLooper()).postDelayed(this::animateMascotExit, 2000);
+            }
+        });
+    }
+
+    private String getSubtitulo(String tipo, int stepIndex) {
+        if (tipo == null) return "Passado";
+
+        switch (tipo.toLowerCase().replace("õ", "o").replace("ã", "a")) {
+            case "carreira":
+                return stepIndex == 0 ? "Situação Atual" : (stepIndex == 1 ? "Ação Recomendada" : "Resultado Esperado");
+            case "decisoes":
+                return stepIndex == 0 ? "Prós" : (stepIndex == 1 ? "Contras" : "Conselho");
+            case "autoconhecimento":
+                return stepIndex == 0 ? "Mente" : (stepIndex == 1 ? "Corpo" : "Espírito");
+            case "padrao":
+            default:
+                return stepIndex == 0 ? "Passado" : (stepIndex == 1 ? "Presente" : "Futuro");
+        }
+    }
+
+    private void reLerCarta(int index) {
+        if (currentStep >= 4 && leiturasSalvas[index] != null) {
+            setMascotText(leiturasSalvas[index]);
+        }
     }
 
     private void disableBackButton() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // Do nothing
             }
         });
     }
@@ -104,7 +140,6 @@ public class ReadingActivity extends AppCompatActivity {
             bgMusic.setLooping(true);
             bgMusic.start();
         }
-
         flipSound = MediaPlayer.create(this, R.raw.card_reveal);
     }
 
@@ -117,23 +152,26 @@ public class ReadingActivity extends AppCompatActivity {
     }
 
     private void handleScreenClick() {
+        if (isProcessing) return;
+
         if (currentStep == 0) {
-            revealCard(card1, deckIndices.get(0));
+            revealCard(card1, deckIndices.get(0), 0);
             currentStep++;
         } else if (currentStep == 1) {
-            revealCard(card2, deckIndices.get(1));
+            revealCard(card2, deckIndices.get(1), 1);
             currentStep++;
         } else if (currentStep == 2) {
-            revealCard(card3, deckIndices.get(2));
+            revealCard(card3, deckIndices.get(2), 2);
             currentStep++;
         } else if (currentStep == 3) {
-            setMascotText("Os astros falaram, Agora é com você, humano. Miau!");
+            setMascotText("As cartas foram tiradas! Clique nelas para reler as mensagens, ou clique em mim para encerrar. Miau!");
             currentStep++;
-            new Handler(Looper.getMainLooper()).postDelayed(this::animateMascotExit, 2000);
+        } else if (currentStep >= 4) {
+            setMascotText("As cartas foram tiradas! Clique nelas para reler as mensagens, ou clique em mim para encerrar. Miau!");
         }
     }
 
-    private void revealCard(ImageView card, int cardIndex) {
+    private void revealCard(ImageView card, int cardIndex, int stepIndex) {
         isProcessing = true;
         String nomeDaCarta = cardNames[cardIndex];
 
@@ -148,19 +186,21 @@ public class ReadingActivity extends AppCompatActivity {
             setMascotText("Miau... interpretando " + nomeDaCarta + "...");
             card.animate().rotationY(0f).setDuration(900).start();
 
+            String subtitulo = getSubtitulo(tipoLeitura, stepIndex);
+
             String seuPrompt = "Você é o Miauráculo, um gato místico. " +
-                    "Leitura de " + tipoLeitura + ", carta: " + nomeDaCarta + ". " +
-                    "Explique o significado dessa carta para a situação do humano de forma mística e acolhedora. " +
+                    "Leitura de " + tipoLeitura + " com foco em: '" + subtitulo + "'. Carta: " + nomeDaCarta + ". " +
+                    "Explique o significado dessa carta para essa posição específica da leitura de forma mística e acolhedora. " +
                     "Regras estritas: " +
                     "1. Responda em um único parágrafo. " +
                     "2. Use no máximo 3 a 4 frases curtas. " +
                     "3. Inclua um leve toque felino no final.";
 
-            mistralCall(seuPrompt);
+            mistralCall(seuPrompt, stepIndex);
         }).start();
     }
 
-    private void mistralCall(String prompt) {
+    private void mistralCall(String prompt, int stepIndex) {
         MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
         try {
@@ -203,8 +243,13 @@ public class ReadingActivity extends AppCompatActivity {
                                     .getJSONObject("message")
                                     .getString("content");
 
+                            String subtitulo = getSubtitulo(tipoLeitura, stepIndex);
+                            String textoFinal = "<b>" + subtitulo + "</b><br><br>" + llmReply;
+
+                            leiturasSalvas[stepIndex] = textoFinal;
+
                             runOnUiThread(() -> {
-                                setMascotText(llmReply);
+                                setMascotText(textoFinal);
                                 isProcessing = false;
                             });
 
@@ -270,7 +315,11 @@ public class ReadingActivity extends AppCompatActivity {
     }
 
     public void setMascotText(String message) {
-        txtMessage.setText(message);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            txtMessage.setText(Html.fromHtml(message, Html.FROM_HTML_MODE_COMPACT));
+        } else {
+            txtMessage.setText(Html.fromHtml(message));
+        }
     }
 
     private void animateMascotExit() {

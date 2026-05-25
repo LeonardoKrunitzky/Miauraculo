@@ -3,35 +3,40 @@ package com.example.miauraculo;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.view.MotionEvent;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputLayout;
-import java.util.Random;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
-
-    private SensorManager sensorManager;
-    private Sensor proximitySensor;
+public class MainActivity extends AppCompatActivity {
 
     private AutoCompleteTextView dropdown;
     private TextInputLayout dropdownLayout;
     private MaterialButton btnProximo;
     private TextView tvEnergiaStatus;
+    private ImageView ivTouchArea;
 
-    private int targetRetries;
-    private int currentAttempts = 0;
-    private boolean handInside = false;
     private boolean isEnergyRead = false;
+    private boolean isPressing = false;
+    private int energyLevel = 0;
+    private final int MAX_ENERGY = 100;
+    private float currentTouchPressure = 0f;
+
+    private final Handler chargeHandler = new Handler(Looper.getMainLooper());
+    private Runnable chargeRunnable;
+    private Vibrator vibrator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,22 +47,82 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         dropdownLayout = findViewById(R.id.dropdownLayout);
         btnProximo = findViewById(R.id.btnProximo);
         tvEnergiaStatus = findViewById(R.id.tvEnergiaStatus);
+        ivTouchArea = findViewById(R.id.ivTouchArea);
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        setupSensor();
+        setupTouchSensor();
         setupDropdown();
         setupButton();
         animateUI();
     }
 
-    private void setupSensor() {
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        if (sensorManager != null) {
-            proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+    private void vibrateDevice(long duration) {
+        if (vibrator != null && vibrator.hasVibrator()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE));
+            } else {
+                vibrator.vibrate(duration);
+            }
         }
     }
 
-    private void setupRetryTrick() {
-        targetRetries = new Random().nextInt(3) + 1;
+    private void setupTouchSensor() {
+        ivTouchArea.setOnTouchListener((v, event) -> {
+            if (isEnergyRead) return false;
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    isPressing = true;
+                    currentTouchPressure = event.getPressure();
+                    vibrateDevice(50);
+                    startCharging();
+                    v.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).start();
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    currentTouchPressure = event.getPressure();
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isPressing = false;
+                    stopCharging();
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
+                    return true;
+            }
+            return false;
+        });
+    }
+
+    private void startCharging() {
+        tvEnergiaStatus.setText("Canalizando energia... Mantenha pressionado!");
+        tvEnergiaStatus.setTextColor(Color.parseColor("#FF9800"));
+
+        chargeRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!isPressing) return;
+
+                int chargeStep = 2 + (int) (currentTouchPressure * 15);
+                energyLevel += chargeStep;
+
+                if (energyLevel >= MAX_ENERGY) {
+                    unlockInterface();
+                } else {
+                    chargeHandler.postDelayed(this, 100);
+                }
+            }
+        };
+        chargeHandler.post(chargeRunnable);
+    }
+
+    private void stopCharging() {
+        chargeHandler.removeCallbacks(chargeRunnable);
+        if (!isEnergyRead) {
+            energyLevel = 0;
+            tvEnergiaStatus.setText("Conexão perdida. Pressione novamente a pata para carregar.");
+            tvEnergiaStatus.setTextColor(Color.parseColor("#FFEB3B"));
+        }
     }
 
     private void setupDropdown() {
@@ -89,83 +154,36 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void lockInterface() {
         dropdownLayout.setEnabled(false);
         btnProximo.setEnabled(false);
-        tvEnergiaStatus.setText("Aproxime a mão do topo da tela para ler sua energia...");
+        tvEnergiaStatus.setText("Pressione e segure o ícone para ler sua energia...");
         tvEnergiaStatus.setTextColor(Color.parseColor("#FFEB3B"));
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        isEnergyRead = false;
-        currentAttempts = 0;
-        handInside = false;
-        setupRetryTrick();
-        lockInterface();
-
-        if (proximitySensor != null) {
-            sensorManager.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (proximitySensor != null) {
-            sensorManager.unregisterListener(this);
-        }
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() != Sensor.TYPE_PROXIMITY || isEnergyRead) return;
-
-        float distance = event.values[0];
-        boolean isClose = distance < Math.min(proximitySensor.getMaximumRange(), 5.0f);
-
-        if (isClose && !handInside) {
-            handInside = true;
-            handleProximityTrigger();
-        } else if (!isClose && handInside) {
-            handInside = false;
-            handleProximityRelease();
-        }
-    }
-
-    /**
-     * Handles the logic when the hand is detected near the sensor.
-     */
-    private void handleProximityTrigger() {
-        if (currentAttempts < targetRetries) {
-            currentAttempts++;
-            tvEnergiaStatus.setText("Energia recebida. Aproxime a mão novamente!");
-            tvEnergiaStatus.setTextColor(Color.parseColor("#FF9800"));
-        } else {
-            unlockInterface();
-        }
-    }
-
-
-    private void handleProximityRelease() {
-        if (currentAttempts < targetRetries) {
-            tvEnergiaStatus.setText("Flutuação de energia detectada, porém está muito negativa. Afaste a mão para tentar novamente.");
-            tvEnergiaStatus.setTextColor(Color.parseColor("#FFEB3B")); // Amarelo
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Not used
-    }
-
-
     private void unlockInterface() {
         isEnergyRead = true;
-        sensorManager.unregisterListener(this);
+        isPressing = false;
+        chargeHandler.removeCallbacks(chargeRunnable);
+
+        vibrateDevice(300);
 
         tvEnergiaStatus.setText("Energia positiva coletada! Escolha a leitura.");
         tvEnergiaStatus.setTextColor(Color.parseColor("#A5D6A7"));
 
         dropdownLayout.setEnabled(true);
         btnProximo.setEnabled(true);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isEnergyRead = false;
+        energyLevel = 0;
+        lockInterface();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isPressing = false;
+        chargeHandler.removeCallbacks(chargeRunnable);
     }
 }

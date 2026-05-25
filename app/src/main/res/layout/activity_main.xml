@@ -29,11 +29,22 @@
             android:gravity="center"
             android:layout_marginBottom="12dp"/>
 
+        <ImageView
+            android:id="@+id/ivTouchArea"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/cat_paw"
+            android:contentDescription="Área de Toque (Pata de Gato)"
+            android:clickable="true"
+            android:focusable="true"/>
+
         <TextView
             android:id="@+id/tvEnergiaStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Aproxime a mão do topo da tela para ler sua energia..."
+            android:text="Pressione e segure o ícone para ler sua energia..."
             android:textColor="#FFEB3B"
             android:textSize="14sp"
             android:textStyle="italic"
