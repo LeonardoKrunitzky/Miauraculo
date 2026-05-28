@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
     private void lockInterface() {
         dropdownLayout.setEnabled(false);
         btnProximo.setEnabled(false);
-        tvEnergiaStatus.setText("Pressione e segure o ícone para ler sua energia...");
+        tvEnergiaStatus.setText("Pressione e segure a pata para ler sua energia...");
         tvEnergiaStatus.setTextColor(Color.parseColor("#FFEB3B"));
     }
 
